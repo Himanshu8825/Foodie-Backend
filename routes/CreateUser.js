@@ -4,6 +4,9 @@ const User = require('../models/User');
 const { body, validationResult } = require('express-validator');
 
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const jwtSecret = "aiojernijogthytjurtyrtersdfjdhgjghfgd"
+
 
 router.post('/creatuser',
     [body('email').isEmail(),
@@ -17,7 +20,7 @@ router.post('/creatuser',
         }
 
         const salt = await bcrypt.genSalt(10);
-        let secPass = await bcrypt.hash(req.body.pass , salt);
+        let secPass = await bcrypt.hash(req.body.pass, salt);
         try {
             await User.create({
                 name: req.body.name,
@@ -34,7 +37,7 @@ router.post('/creatuser',
     })
 
 
-router.post('/loginuser',
+ router.post('/loginuser',
     [body('email').isEmail(),
     body('pass').isLength({ min: 5 })],
 
@@ -53,11 +56,21 @@ router.post('/loginuser',
                 return res.status(400).json({ errors: "Please Enter Valid Details" })
             }
 
-            if (req.body.pass !== userData.pass) {
+            const pwtCompare = await bcrypt.compare(req.body.pass, userData.pass);
+
+            if (!pwtCompare) {
                 return res.status(400).json({ errors: "Please Enter Valid Details" })
             }
 
-            return res.json({ success: true });
+            const data = {
+                user: {
+                    id: userData.id
+                }
+            }
+
+            const authToken = jwt.sign(data , jwtSecret)
+
+            return res.json({ success: true , authToken:authToken});
 
         } catch (error) {
             console.log(error);
